@@ -9,6 +9,7 @@ import threading
 import json
 from .models import ApiUser
 from .utils import hash_password, generate_self_signed_cert, verify_password
+from django.conf import settings
 
 
 @csrf_exempt
