@@ -96,7 +96,8 @@ def register_api_user(request):
 
         # Save to file
         filename = f"{email.replace('@', '_')}.p12"
-        filepath = os.path.join("media/certificates", filename)
+        # filepath = os.path.join("media/certificates", filename)
+        filepath = os.path.join(settings.MEDIA_ROOT, 'certificates', filename)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "wb") as f:
             f.write(cert_bytes)
