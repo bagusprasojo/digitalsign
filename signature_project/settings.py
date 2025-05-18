@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-7=hb3zof(5@-p6zi3$imlyhxrf2iku8z@l+86)$n&m1(go)^8#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['mtisdigital.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['mtisdigital.pythonanywhere.com','fastapi.tisera.id', '127.0.0.1', 'localhost']
 
 
 # Application definition
