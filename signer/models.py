@@ -25,3 +25,11 @@ class ApiClient(models.Model):
 
     def __str__(self):
         return f"{self.name} ({'aktif' if self.is_active else 'nonaktif'})"
+    
+class PdfSignLog(models.Model):
+    email = models.EmailField()
+    ip_address = models.GenericIPAddressField()
+    status = models.CharField(max_length=100)
+    message = models.TextField()
+    filename = models.CharField(max_length=1024, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)

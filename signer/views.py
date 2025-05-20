@@ -7,7 +7,7 @@ from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
 import tempfile, os
 import threading
 import json
-from .models import ApiUser
+from .models import ApiUser, PdfSignLog  
 from .utils import hash_password, generate_self_signed_cert, verify_password
 from django.conf import settings
 
@@ -17,36 +17,56 @@ def sign_pdf_view_by_email(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Only POST allowed'}, status=405)
     
+    ip = request.META.get('REMOTE_ADDR')
     email = request.POST.get("email")
+    password = request.POST.get("password")
+    pdf_file = request.FILES.get("pdf")
+    field_name = request.POST.get("field_name")
+    
     if not email:
+        msg = 'Missing email fields'
+        PdfSignLog.objects.create(email=email or '', ip_address=ip, status='FAILED', message=msg)
         return JsonResponse({'error': 'Missing email'}, status=400)
     
-    password = request.POST.get("password")
+    
     if not password:
+        msg = 'Missing password fields'
+        PdfSignLog.objects.create(email=email or '', ip_address=ip, status='FAILED', message=msg)
         return JsonResponse({'error': 'Missing password'}, status=400)   
 
-    pdf_file = request.FILES.get("pdf")
     if not pdf_file:
+        msg = 'Missing pdf fields'
+        PdfSignLog.objects.create(email=email or '', ip_address=ip, status='FAILED', message=msg)
         return JsonResponse({'error': 'Missing PDF file'}, status=400)
 
-    field_name = request.POST.get("field_name")
     if not field_name:
+        msg = 'Missing field_name  fields'
+        PdfSignLog.objects.create(email=email or '', ip_address=ip, status='FAILED', message=msg)        
         return JsonResponse({'error': 'Missing field name'}, status=400)
 
-    if not email or not password or not pdf_file:
-        return JsonResponse({'error': 'email, password, and pdf_file are required'}, status=400)
+    
+    
 
     try:
         user = ApiUser.objects.get(email=email)
     except ApiUser.DoesNotExist:
+        msg = 'User not found'
+        PdfSignLog.objects.create(email=email, ip_address=ip, status='FAILED', message=msg)
+        
         return JsonResponse({'error': 'User not found'}, status=404)
 
     if not verify_password(password, user.password_hash):
+        msg = 'Invalid password'
+        PdfSignLog.objects.create(email=email, ip_address=ip, status='FAILED', message=msg)
+        
         return JsonResponse({'error': 'Invalid password'}, status=403)
 
     try:
         signer = signers.SimpleSigner.load_pkcs12(user.cert_file.path,passphrase=password.encode())
     except Exception as e:
+        msg = f'Failed to load certificate: {str(e)}'
+        PdfSignLog.objects.create(email=email, ip_address=ip, status='FAILED', message=msg)
+        
         return JsonResponse({'error': f'Failed to load certificate: {str(e)}'}, status=500)
 
     # Simpan input PDF ke file sementara
@@ -71,8 +91,12 @@ def sign_pdf_view_by_email(request):
             output_file.write(signed_pdf.getbuffer())
             signed_path = output_file.name
 
+        PdfSignLog.objects.create(email=email, ip_address=ip, status='SUCCESS', message='Signed PDF successfully')        
         return FileResponse(open(signed_path, 'rb'), as_attachment=True, filename='signed.pdf')
     except Exception as e:
+        msg = f'Unexpected error: {str(e)}'
+        PdfSignLog.objects.create(email=email, ip_address=ip, status='FAILED', message=msg)
+        
         return JsonResponse({'error': str(e)}, status=500)  
 
 @csrf_exempt
